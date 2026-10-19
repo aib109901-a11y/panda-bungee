@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🐼 熊貓Bungee</title>
+<style>
+:root{
+  --green:#0f381e; --gold:#ffd700; --blue:#1687e8; --red:#dc3545;
+  --card-width:145px; --card-height:205px;
+}
+*{box-sizing:border-box}
+body{
+  margin:0; min-height:100vh; padding:18px;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft JhengHei",Arial,sans-serif;
+  color:#fff; background:
+    radial-gradient(circle at 15% 10%,rgba(255,255,255,.12),transparent 25%),
+    linear-gradient(135deg,#0b321b,#145b2d 55%,#0a2817);
+}
+h1{text-align:center;margin:8px 0 12px;font-size:clamp(1.5rem,4vw,2rem);text-shadow:2px 2px 4px #0008}
+#top-bar{display:flex;justify-content:center;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+.badge{background:#0007;border:1px solid var(--gold);color:var(--gold);padding:7px 14px;border-radius:22px;font-weight:700}
+#game-stage{
+  width:min(900px,100%);margin:auto;padding:20px;border-radius:18px;
+  background:#ffffff0d;border:1px solid #ffffff2e;box-shadow:0 8px 32px #0006;
+  text-align:center;
+}
+.level-title{font-size:1.25rem;font-weight:800;margin-bottom:8px}
+.instructions{color:#ffeeb0;margin-bottom:14px;line-height:1.6}
+#card-area{display:flex;justify-content:center;min-height:215px}
+.card{
+ width:var(--card-width);height:var(--card-height);background:#fff;color:#222;
+ border-radius:13px;box-shadow:0 10px 22px #0006;border:2px solid #ddd;
+ padding:11px;display:flex;flex-direction:column;justify-content:space-between;
+ font-weight:800;position:relative;
+}
+.card-top{font-size:.95rem;text-align:left;color:#8b0000;min-height:24px}
+.card-center{font-size:2.7rem;line-height:1.1;margin:auto;text-align:center}
+.card-bottom{font-size:.95rem;text-align:right;transform:rotate(180deg);color:#8b0000;min-height:24px}
+.card.correct{border:4px solid #28a745;background:#fafffb}
+.card.wrong{border:4px solid var(--red);background:#fff5f5;color:var(--red)}
+#message{min-height:34px;margin:12px 0;font-size:1.08rem;font-weight:800;color:#ffd54f}
+.options{display:grid;grid-template-columns:repeat(2,minmax(130px,1fr));gap:12px;width:min(620px,100%);margin:0 auto}
+.option-btn{
+ border:0;border-radius:12px;padding:14px 10px;font-size:1.05rem;font-weight:800;
+ cursor:pointer;background:#f8f9fa;color:#333;box-shadow:0 4px 8px #0003;transition:.2s
+}
+.option-btn:hover:not(:disabled){transform:translateY(-2px);background:#e8f0f7}
+.option-btn.correct{background:#28a745;color:#fff}.option-btn.wrong{background:#dc3545;color:#fff;animation:shake .35s}
+.option-btn:disabled{cursor:default}
+.controls{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin-top:15px}
+.action-btn{
+ border:0;border-radius:25px;padding:11px 22px;background:linear-gradient(135deg,#1687e8,#0864b9);
+ color:#fff;font-weight:800;font-size:1rem;cursor:pointer;box-shadow:0 5px 12px #0004
+}
+.action-btn.secondary{background:#fff;color:#17466d}
+.action-btn:disabled{opacity:.55;cursor:not-allowed}
+#solitaire-section{width:min(900px,100%);margin:18px auto 0;text-align:center}
+#solitaire-pile{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;min-height:210px}
+.pile-slot{
+ width:var(--card-width);height:var(--card-height);border:2px dashed #ffffff55;border-radius:13px;
+ display:flex;align-items:center;justify-content:center;color:#ffffff55;font-weight:700
+}
+.pile-slot .card{animation:slideIn .45s ease}
+.hidden{display:none!important}
+.feedback{margin:10px auto;max-width:650px;padding:12px;border-radius:12px;background:#fff;color:#234;text-align:left}
+.good{border-left:6px solid #28a745}.bad{border-left:6px solid #dc3545}
+.speaking-word{font-size:3rem;font-weight:900;color:#fff;margin:10px}
+.tone-chip{display:inline-block;background:#fff;color:#15558c;padding:6px 12px;border-radius:18px;font-weight:800;margin:3px}
+.mic{
+ width:88px;height:88px;border-radius:50%;border:0;background:#1687e8;color:#fff;
+ font-size:2rem;cursor:pointer;box-shadow:0 0 0 8px #1687e833,0 8px 18px #0005
+}
+.mic.listening{animation:pulse 1s infinite;background:#e53935}
+.progressbar{width:min(600px,100%);height:12px;background:#ffffff30;border-radius:10px;overflow:hidden;margin:10px auto}
+.progressbar span{display:block;height:100%;background:linear-gradient(90deg,#ffd54f,#ff9800);width:0%;transition:.3s}
+.result-box{background:#fff;color:#17354c;border-radius:18px;padding:24px;max-width:650px;margin:15px auto}
+.result-score{font-size:3rem;font-weight:900;color:#1687e8}
+#next-level-btn{display:none;margin:15px auto}
+.small{font-size:.9rem;color:#d7ebff}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+@keyframes slideIn{from{opacity:0;transform:translateY(-25px) scale(.85)}to{opacity:1;transform:none}}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 8px #e5393540,0 8px 18px #0005}50%{box-shadow:0 0 0 18px #e5393520,0 8px 18px #0005}}
+@media(max-width:560px){
+ :root{--card-width:125px;--card-height:180px}
+ .options{grid-template-columns:1fr 1fr}.card-center{font-size:2.2rem}
+}
+
+/* 新版首頁與整體視覺 */
+body{padding:0;color:#143b70;background:linear-gradient(135deg,#bceeff,#f4fcff 52%,#fff0bd);min-height:100vh}
+.app{max-width:1080px;margin:auto;padding:18px}
+.site-header{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin:0 auto 16px}
+.brand{display:flex;align-items:center;gap:12px}.logo{font-size:38px;background:white;border-radius:17px;padding:8px;box-shadow:0 5px #c9eafa}
+.brand h1{margin:0;color:#07509b;font-size:clamp(25px,4vw,38px);text-align:left;text-shadow:none}
+.brand p{margin:0;color:#5681a4;font-size:13px}
+.header-stats{display:flex;gap:8px}.stat{background:#fff;padding:10px 13px;border-radius:14px;font-weight:900;box-shadow:0 4px #c9eafa;color:#143b70}.stat span{color:#087fd3}
+.home-panel{display:grid;grid-template-columns:1fr 1fr;gap:22px;align-items:center;margin-top:18px;padding:clamp(18px,4vw,34px);border:3px solid white;border-radius:27px;background:linear-gradient(135deg,#8be4ff,#effcff 58%,#fff1bd);box-shadow:0 12px 32px #298ac51e}
+.tag{display:inline-block;background:#e5f7ff;color:#1267a9;padding:7px 13px;border-radius:99px;font-size:13px;font-weight:900}
+.hero-copy h2{font-size:clamp(36px,6vw,62px);line-height:1.12;margin:15px 0;color:#07509b;text-shadow:0 3px white}.hero-copy h2 em{font-style:normal;color:#ff9c0b}
+.hero-copy p{line-height:1.8;color:#3f658b}
+.hero-art{min-height:290px;border-radius:24px;border:3px solid white;background:linear-gradient(#85ddff 0%,#d7f8ff 65%,#9cdaa7 66%);display:grid;place-items:center;position:relative;overflow:hidden}
+.hero-art:before{content:"";position:absolute;bottom:0;width:100%;height:38%;background:#5fbd97;clip-path:polygon(0 100%,0 60%,20% 12%,36% 75%,55% 0,75% 72%,90% 20%,100% 66%,100% 100%)}
+.panda{font-size:clamp(110px,18vw,165px);z-index:1;animation:bob 2.3s infinite}.bubble{position:absolute;top:15px;right:15px;background:#fff;border-radius:16px;padding:10px 13px;font-weight:900;color:#0874c3;z-index:2}
+.home-actions{display:flex;gap:11px;flex-wrap:wrap;margin-top:18px}
+.action-btn{background:linear-gradient(135deg,#29b4ff,#0876e7);box-shadow:0 4px #075db2;border-radius:99px;padding:13px 20px}
+.start-btn{background:linear-gradient(135deg,#ffdb43,#ff9b00);color:#634000;box-shadow:0 4px #d97c00}
+.home-secondary,.action-btn.secondary{background:#fff;color:#1763a3;border:2px solid #cce9ff;box-shadow:0 3px #d9effb}
+.rules-panel{margin-top:18px;padding:clamp(18px,4vw,34px);border:3px solid white;border-radius:27px;background:#ffffffed;box-shadow:0 12px 32px #298ac51e;text-align:center}
+.rules-panel h2{color:#105a9e}.rule-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:22px 0}
+.rule-grid>div{background:#f1faff;border-radius:18px;padding:18px;line-height:1.7}.rule-grid p{margin-bottom:0;color:#5681a4}
+.rule-note,.footer{color:#7897b0;font-size:13px;line-height:1.7}
+#game-ui #top-bar{display:flex;gap:8px}.badge{background:#fff;color:#1267a9;border:1px solid #cdeaff;box-shadow:0 3px #d9effb}
+#game-stage{background:#ffffffed;border:3px solid white;box-shadow:0 12px 32px #298ac51e;color:#143b70}
+.level-title{color:#105a9e}.instructions{color:#5681a4}
+#message{color:#0876c7}.option-btn{border-radius:17px;background:linear-gradient(135deg,#42baff,#087be9);color:#fff}
+.option-btn:nth-child(2){background:linear-gradient(135deg,#3bd88c,#079b56)}.option-btn:nth-child(3){background:linear-gradient(135deg,#ffc34d,#ff8900)}.option-btn:nth-child(4){background:linear-gradient(135deg,#ff7c88,#e82b46)}
+.card{border-radius:15px}.pile-slot{border-color:#a9d9f5;color:#8bb8d4}
+#solitaire-section{color:#105a9e}#solitaire-pile .card{color:#222}
+.feedback{box-shadow:0 3px 12px #0000000a}
+.footer{text-align:center;padding:20px}
+@media(max-width:740px){.home-panel{grid-template-columns:1fr}.hero-art{min-height:220px}.rule-grid{grid-template-columns:1fr}.app{padding:12px}.header-stats{width:100%}.stat{flex:1;text-align:center}}
+
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bungee&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+/* Panda Bungee 視覺主題 */
+body{font-family:'Noto Sans TC',sans-serif;background:radial-gradient(circle at 8% 8%,#fff 0 4%,transparent 4.5%),linear-gradient(145deg,#d8f6ff,#fff7d6 55%,#e2ffe9)}
+.brand h1,.hero-copy h2{font-family:'Bungee','Noto Sans TC',sans-serif;letter-spacing:.02em}
+.logo,.hero-art{border:4px solid #fff;box-shadow:0 7px 0 #b9e3f5,0 12px 24px #225a7a18}
+.panda{filter:drop-shadow(0 8px 0 #a8d8e9);animation:bob 1.5s infinite ease-in-out}
+@keyframes bob{0%,100%{transform:translateY(0) rotate(-3deg)}50%{transform:translateY(-13px) rotate(3deg)}}
+</style>
+</head>
+<body>
+<div class="app">
+<header class="site-header">
+  <div class="brand"><div class="logo">🐼</div><div><h1>熊貓Bungee</h1><p>聽出聲調・說出中文・勇闖聲調島</p></div></div>
+  <div class="header-stats"><div class="stat">⭐ 分數 <span id="header-score">0</span></div><div class="stat">🔥 Combo <span id="header-combo">0</span></div></div>
+</header>
+<section id="home-screen" class="home-panel">
+  <div class="hero-copy"><span class="tag">🎮 華語聲調冒險</span><h2>熊貓Bungee<br><em>出發！</em></h2>
+  <p>🐼 跟著熊貓教練蹦蹦跳跳闖四關！每一題出現時都會自動播放華語發音，聽清楚後再選答案；第四關再挑戰開口說中文！</p>
+  <div class="home-actions"><button class="action-btn start-btn" id="start-game-btn">🎧 開始遊戲</button><button class="action-btn home-secondary" id="show-rules-btn">📘 遊戲說明</button></div></div>
+  <div class="hero-art"><div class="bubble">加油！你可以的！</div><div class="panda">🐼</div></div>
+</section>
+<section id="rules-screen" class="rules-panel hidden"><h2>📘 遊戲說明</h2><div class="rule-grid"><div>🃏 <b>第一、二關</b><p>聽單音節或雙音節詞語，選出正確聲調。</p></div><div>🎧 <b>第三關</b><p>聽完整詞語，辨認四種聲調組合。</p></div><div>🎙️ <b>第四關</b><p>聽示範，再使用麥克風說出詞語。</p></div></div><p class="rule-note">建議使用最新版 Chrome，並允許麥克風權限。口說辨識可能受到裝置與環境影響。</p><div class="home-actions"><button class="action-btn" id="rules-start-btn">開始挑戰 →</button><button class="action-btn home-secondary" id="back-home-btn">回首頁</button></div></section>
+
+<div id="game-ui" class="hidden">
+<div id="top-bar">
+  <div class="badge" id="level-badge">🃏 第一關：單音節撲克牌</div>
+  <div class="badge">⭐ 得分：<span id="score">0</span></div>
+  <div class="badge">🔥 Combo：<span id="combo">0</span></div>
+  <div class="badge">📍 <span id="progress">1 / 8</span></div>
+</div>
+
+<div id="game-stage">
+  <div class="level-title" id="level-title">第一關｜單音節聲調撲克牌</div>
+  <div class="instructions" id="instructions">
+    先聽發音，再從兩張牌中選出正確的聲調。
+  </div>
+
+  <div id="card-area">
+    <div class="card" id="current-card">
+      <div class="card-top">?</div>
+      <div class="card-center" id="card-word">天</div>
+      <div class="card-bottom">?</div>
+    </div>
+  </div>
+
+  <div id="message">🔊 題目出現時會自動播放發音！</div>
+  <div id="options" class="options"></div>
+  <div id="feedback" class="feedback hidden"></div>
+
+  <div class="controls">
+    <button class="action-btn" id="play-btn">🔊 再聽一次</button>
+    <button class="action-btn secondary" id="slow-btn">🐢 慢速播放</button>
+    <button class="action-btn" id="mic-btn" style="display:none">🎙️ 開始說話</button>
+  </div>
+
+  <div id="speech-area" class="hidden">
+    <div class="speaking-word" id="speech-word">高興</div>
+    <div id="speech-tone"></div>
+    <p class="small">請先聽示範，再說出完整的雙音節詞。第四關會依「詞語辨識＋聲調音高走向」判定是否得分。</p>
+    <button class="mic" id="big-mic">🎙️</button>
+    <div id="speech-status" style="margin-top:12px;font-weight:800">按下麥克風開始</div>
+    <div class="progressbar"><span id="speech-progress"></span></div>
+    <div id="speech-result"></div>
+    <div class="controls">
+      <button class="action-btn" id="speech-play">🔊 再聽示範</button>
+      <button class="action-btn secondary" id="retry-speech">🔁 再說一次</button>
+      <button class="action-btn" id="speech-next" style="display:none">下一題 ➜</button>
+    </div>
+  </div>
+
+  <button class="action-btn" id="next-level-btn">進入下一關 ➜</button>
+</div>
+
+<div id="solitaire-section">
+  <h3 id="section-title">🃏 接龍完成牌陣</h3>
+  <div id="solitaire-pile"></div>
+</div>
+
+<div style="text-align:center;margin-top:18px">
+  <button class="action-btn secondary" id="restart-btn">↻ 重新開始</button>
+  <button class="action-btn secondary" id="home-btn">🏠 回首頁</button>
+</div>
+</div>
+<footer class="footer">熊貓Bungee・華語聲調練習遊戲｜聽力 × 口說 × 四關挑戰</footer>
+
+<script>
+const level1 = [
+ {w:"天",tone:1,answer:"一聲"}, {w:"高",tone:1,answer:"一聲"},
+ {w:"工",tone:1,answer:"一聲"}, {w:"吃",tone:1,answer:"一聲"},
+ {w:"氣",tone:4,answer:"四聲"}, {w:"興",tone:4,answer:"四聲"},
+ {w:"作",tone:4,answer:"四聲"}, {w:"飯",tone:4,answer:"四聲"}
+];
+
+const level2 = [
+ {w:"天氣",tone:"1+4",answer:"一聲＋四聲"},
+ {w:"高興",tone:"1+4",answer:"一聲＋四聲"},
+ {w:"工作",tone:"1+4",answer:"一聲＋四聲"},
+ {w:"吃飯",tone:"1+4",answer:"一聲＋四聲"},
+ {w:"生日",tone:"1+4",answer:"一聲＋四聲"},
+ {w:"需要",tone:"1+4",answer:"一聲＋四聲"},
+ {w:"希望",tone:"1+4",answer:"一聲＋四聲"},
+ {w:"發現",tone:"1+4",answer:"一聲＋四聲"},
+ {w:"方式",tone:"1+4",answer:"一聲＋四聲"},
+ {w:"安靜",tone:"1+4",answer:"一聲＋四聲"},
+ {w:"開會",tone:"1+4",answer:"一聲＋四聲"},
+ {w:"地方",tone:"4+1",answer:"四聲＋一聲"},
+ {w:"上班",tone:"4+1",answer:"四聲＋一聲"},
+ {w:"下班",tone:"4+1",answer:"四聲＋一聲"},
+ {w:"大家",tone:"4+1",answer:"四聲＋一聲"}
+];
+
+const level3 = [
+ {w:"飛機",answer:"一聲＋一聲"},
+ {w:"醫生",answer:"一聲＋一聲"},
+ {w:"高興",answer:"一聲＋四聲"},
+ {w:"天氣",answer:"一聲＋四聲"},
+ {w:"地方",answer:"四聲＋一聲"},
+ {w:"上班",answer:"四聲＋一聲"},
+ {w:"電話",answer:"四聲＋四聲"},
+ {w:"現在",answer:"四聲＋四聲"},
+ {w:"吃飯",answer:"一聲＋四聲"},
+ {w:"世界",answer:"四聲＋四聲"}
+];
+
+const level4 = [
+ {w:"高興",tone:"1+4",answer:"一聲＋四聲"},
+ {w:"天氣",tone:"1+4",answer:"一聲＋四聲"},
+ {w:"工作",tone:"1+4",answer:"一聲＋四聲"},
+ {w:"吃飯",tone:"1+4",answer:"一聲＋四聲"},
+ {w:"生日",tone:"1+4",answer:"一聲＋四聲"},
+ {w:"需要",tone:"1+4",answer:"一聲＋四聲"},
+ {w:"地方",tone:"4+1",answer:"四聲＋一聲"},
+ {w:"上班",tone:"4+1",answer:"四聲＋一聲"}
+];
+
+const choices2=["一聲＋四聲","四聲＋一聲"];
+const choices4=["一聲＋一聲","一聲＋四聲","四聲＋一聲","四聲＋四聲"];
+
+let level=1,index=0,score=0,combo=0,processing=false;
+let recognition=null,audioCtx=null,analyser=null,micStream=null;
+let pitchSamples=[],speechStart=0,speechTimer=null;
+
+const $=id=>document.getElementById(id);
+function shuffle(a){return [...a].sort(()=>Math.random()-.5)}
+function updateTop(){
+ $("score").textContent=score; $("combo").textContent=combo;
+ const data=getData();
+ $("progress").textContent=`${Math.min(index+1,data.length)} / ${data.length}`;
+}
+function getData(){return level===1?level1:level===2?level2:level===3?level3:level4}
+
+function speak(text, rate=0.72){
+ if(!("speechSynthesis" in window)){alert("目前瀏覽器不支援語音播放。");return}
+ speechSynthesis.cancel();
+ const u=new SpeechSynthesisUtterance(text);
+ u.lang="zh-TW"; u.rate=rate; u.pitch=1;
+ speechSynthesis.speak(u);
+}
+
+function resetCard(){
+ $("current-card").className="card";
+ $("card-word").textContent=getData()[index].w;
+}
+function setOptions(arr){
+ $("options").innerHTML="";
+ shuffle(arr).forEach(opt=>{
+  const b=document.createElement("button"); b.className="option-btn"; b.textContent=opt;
+  b.onclick=()=>answer(opt,b);
+  $("options").appendChild(b);
+ });
+}
+function setupSolitaire(n){
+ $("solitaire-pile").innerHTML="";
+ for(let i=0;i<n;i++){
+  const s=document.createElement("div"); s.className="pile-slot"; s.textContent=i+1;
+  $("solitaire-pile").appendChild(s);
+ }
+}
+function addPile(q,ok){
+ const slots=document.querySelectorAll(".pile-slot");
+ if(!slots[index]) return;
+ slots[index].innerHTML=`<div class="card ${ok?"correct":"wrong"}">
+   <div class="card-top">${q.tone||q.answer}</div>
+   <div class="card-center">${q.w}</div>
+   <div class="card-bottom">${q.tone||q.answer}</div>
+ </div>`;
+}
+function answer(selected,btn){
+ if(processing) return;
+ processing=true;
+ document.querySelectorAll(".option-btn").forEach(b=>b.disabled=true);
+ const q=getData()[index], ok=selected===q.answer;
+ btn.classList.add(ok?"correct":"wrong");
+ if(ok){score+=20;combo++;$("message").textContent="✨ 答對了！"}
+ else {combo=0;$("message").textContent=`❌ 答錯了！正確答案：${q.answer}`}
+ $("score").textContent=score;$("combo").textContent=combo;
+ addPile(q,ok);
+ setTimeout(()=>{index++;loadLevelQuestion()},700);
+}
+
+function loadLevelQuestion(){
+ const data=getData();
+ if(index>=data.length){finishLevel();return}
+ processing=false; updateTop(); resetCard();
+ $("feedback").classList.add("hidden");
+ $("speech-area").classList.add("hidden");
+ $("options").style.display="grid";
+ $("play-btn").style.display="inline-block"; $("slow-btn").style.display="inline-block";
+ $("mic-btn").style.display="none";
+ $("next-level-btn").style.display="none";
+ $("current-card").style.display="flex";
+ $("message").textContent="🔊 題目出現時會自動播放發音！";
+ if(level===1){
+   $("level-badge").textContent="🃏 第一關：單音節撲克牌";
+   $("level-title").textContent="第一關｜單音節聲調撲克牌";
+   $("instructions").textContent="題目會自動播放單音節；也可以按「再聽一次」，再選出「一聲」或「四聲」。";
+   setOptions(["一聲","四聲"]);
+ }else if(level===2){
+   $("level-badge").textContent="🃏 第二關：雙音節撲克牌";
+   $("level-title").textContent="第二關｜雙音節聲調撲克牌";
+   $("instructions").textContent="題目會自動播放日常詞語，只比較「一聲＋四聲」與「四聲＋一聲」。";
+   setOptions(choices2);
+ }else if(level===3){
+   $("level-badge").textContent="🎧 第三關：聽力挑戰";
+   $("level-title").textContent="第三關｜四種聲調組合聽辨";
+   $("instructions").textContent="題目會自動播放完整雙音節詞語，從四個聲調組合中選出正確答案。";
+   setOptions(choices4);
+ }else{
+   $("level-badge").textContent="🎙️ 第四關：口說挑戰";
+   $("level-title").textContent="第四關｜雙音節口說聲調挑戰";
+   $("instructions").textContent="先聽示範，再說出詞語；詞語辨識正確＋聲調走向符合，才會得分。";
+   $("current-card").style.display="none"; $("options").style.display="none";
+   $("play-btn").style.display="none"; $("slow-btn").style.display="none";
+   $("speech-area").classList.remove("hidden");
+   $("speech-word").textContent=data[index].w;
+   $("speech-tone").innerHTML=`<span class="tone-chip">目標：${data[index].answer}</span>`;
+   $("speech-status").textContent="按下麥克風開始";
+   $("speech-result").innerHTML="";
+   $("speech-progress").style.width="0%";
+ }
+ // 自動發音：進入遊戲後，每題載入即播放；第四關自動播放示範詞語。
+ if (!$ ("game-ui").classList.contains("hidden")) {
+   const word = data[index].w;
+   $("message").textContent = level === 4 ? "🔊 先聽熊貓教練示範，再跟著說！" : "🔊 正在自動播放題目發音……";
+   setTimeout(() => {
+     if (!$ ("game-ui").classList.contains("hidden") && getData()[index] && getData()[index].w === word) speak(word, 0.72);
+   }, 450);
+ }
+}
+
+function finishLevel(){
+ $("game-stage").querySelectorAll(".controls").forEach(x=>{});
+ $("options").innerHTML="";
+ $("feedback").classList.add("hidden");
+ $("current-card").style.display="none";
+ $("play-btn").style.display="none"; $("slow-btn").style.display="none"; $("mic-btn").style.display="none";
+ $("speech-area").classList.add("hidden");
+ $("message").textContent=`🎉 第 ${level} 關完成！`;
+ if(level<4){
+   $("next-level-btn").style.display="block";
+   $("next-level-btn").textContent=`進入第 ${level+1} 關 ➜`;
+ }else{
+   showFinal();
+ }
+}
+function showFinal(){
+ $("next-level-btn").style.display="none";
+ $("game-stage").innerHTML=`<div class="result-box">
+   <div style="font-size:2rem">🏆 恭喜完成四關！</div>
+   <div class="result-score">${score}</div>
+   <p>總分</p>
+   <p>你完成了：單音節 → 雙音節撲克牌 → 四選一聽力 → 口說聲調挑戰。</p>
+   <p class="small" style="color:#456">第四關的自動聲調判定屬於瀏覽器音高的輔助判定，教師仍可搭配實際聆聽進行教學評量。</p>
+   <button class="action-btn" onclick="location.reload()">↻ 再玩一次</button>
+ </div>`;
+}
+
+$("play-btn").onclick=()=>speak(getData()[index].w,.72);
+$("slow-btn").onclick=()=>speak(getData()[index].w,.48);
+$("next-level-btn").onclick=()=>{
+ level++;index=0;setupSolitaire(getData().length);loadLevelQuestion();
+};
+$("restart-btn").onclick=()=>location.reload();
+$("speech-play").onclick=()=>speak(getData()[index].w,.72);
+$("retry-speech").onclick=()=>startSpeaking();
+$("speech-next").onclick=()=>{index++;loadLevelQuestion()};
+
+async function startSpeaking(){
+ $("speech-result").innerHTML=""; $("speech-status").textContent="🎙️ 正在聽你說話……";
+ $("big-mic").classList.add("listening"); $("speech-progress").style.width="5%";
+ pitchSamples=[]; speechStart=performance.now();
+ startPitchCapture();
+ if(!recognition){
+   const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+   if(SR){
+     recognition=new SR(); recognition.lang="zh-TW"; recognition.interimResults=false; recognition.maxAlternatives=5;
+     recognition.onresult=e=>{
+       const texts=[...e.results[0]].map(x=>x.transcript).join("").replace(/\s/g,"");
+       finishSpeaking(texts);
+     };
+     recognition.onerror=()=>finishSpeaking("");
+     recognition.onend=()=>{if($("big-mic").classList.contains("listening")) finishSpeaking("");};
+   }else finishSpeaking("");
+ }
+ if(recognition){try{recognition.start()}catch(e){}}
+ setTimeout(()=>{if($("big-mic").classList.contains("listening")) finishSpeaking("")},3500);
+}
+$("big-mic").onclick=startSpeaking;
+
+async function startPitchCapture(){
+ try{
+  micStream=await navigator.mediaDevices.getUserMedia({audio:true});
+  audioCtx=new (window.AudioContext||window.webkitAudioContext)();
+  const src=audioCtx.createMediaStreamSource(micStream);
+  analyser=audioCtx.createAnalyser(); analyser.fftSize=2048; src.connect(analyser);
+  const buf=new Float32Array(analyser.fftSize);
+  const loop=()=>{
+   if(!$("big-mic").classList.contains("listening")) return;
+   analyser.getFloatTimeDomainData(buf);
+   const f=estimatePitch(buf,audioCtx.sampleRate);
+   if(f>70&&f<500) pitchSamples.push({t:performance.now()-speechStart,f});
+   $("speech-progress").style.width=Math.min(95,((performance.now()-speechStart)/3500)*100)+"%";
+   requestAnimationFrame(loop);
+  };
+  loop();
+ }catch(e){ /* 無法取麥克風時仍讓語音辨識嘗試 */ }
+}
+function estimatePitch(buf,sr){
+ let rms=0; for(let i=0;i<buf.length;i++) rms+=buf[i]*buf[i];
+ rms=Math.sqrt(rms/buf.length); if(rms<.012)return 0;
+ let bestLag=-1,best=-Infinity;
+ for(let lag=Math.floor(sr/500);lag<=Math.floor(sr/70);lag++){
+   let sum=0; for(let i=0;i<buf.length-lag;i++) sum+=buf[i]*buf[i+lag];
+   if(sum>best){best=sum;bestLag=lag}
+ }
+ return bestLag>0?sr/bestLag:0;
+}
+function stopAudio(){
+ try{micStream?.getTracks().forEach(t=>t.stop())}catch(e){}
+ try{audioCtx?.close()}catch(e){}
+ micStream=null;audioCtx=null;analyser=null;
+}
+function finishSpeaking(text){
+ if(!$("big-mic").classList.contains("listening"))return;
+ $("big-mic").classList.remove("listening"); stopAudio();
+ $("speech-progress").style.width="100%";
+ const q=getData()[index];
+ const normalized=(text||"").replace(/\s/g,"");
+ const lexical=normalized.includes(q.w) || q.w.split("").every(ch=>normalized.includes(ch));
+ const toneOK=checkToneContour(q.tone);
+ if(lexical && toneOK){
+   score+=30;combo++; $("score").textContent=score;$("combo").textContent=combo;
+    if($("header-score")) $("header-score").textContent=score;
+    if($("header-combo")) $("header-combo").textContent=combo;
+   $("speech-status").textContent="✅ 正確！詞語和聲調都達標，獲得 30 分！";
+   $("speech-result").innerHTML=`<div class="feedback good">🎉 太棒了！辨識到「${text||q.w}」，聲調走向符合「${q.answer}」。</div>`;
+   $("speech-next").style.display="inline-block";
+ }else if(lexical && !toneOK){
+   combo=0;$("combo").textContent=combo;
+   $("speech-status").textContent="⚠️ 詞語正確，但聲調需要再調整。";
+   $("speech-result").innerHTML=`<div class="feedback bad">有辨識到「${text||q.w}」，但聲調曲線沒有達到本題的自動判定標準。請再聽示範後重說。<br>目標：${q.answer}</div>`;
+   $("speech-next").style.display="none";
+ }else{
+   combo=0;$("combo").textContent=combo;
+   $("speech-status").textContent="❌ 尚未判定正確，請再說一次。";
+   $("speech-result").innerHTML=`<div class="feedback bad">系統辨識到「${text||"（未辨識）"}」。請清楚說出「${q.w}」，並注意 ${q.answer}。</div>`;
+   $("speech-next").style.display="none";
+ }
+}
+function checkToneContour(tone){
+ const fs=pitchSamples.filter(x=>x.f);
+ if(fs.length<5)return false;
+ const mid=Math.floor(fs.length/2);
+ const a=fs.slice(0,mid).map(x=>x.f), b=fs.slice(mid).map(x=>x.f);
+ const avg=x=>x.reduce((s,v)=>s+v,0)/x.length;
+ const first=avg(a),second=avg(b);
+ if(tone==="1+4") return first>second*1.03 && (b[b.length-1] < b[0]*.94 || second < first*.90);
+ if(tone==="4+1") return first>second*.98 && (a[a.length-1] < a[0]*.94) && b[b.length-1] > b[0]*.96;
+ return true;
+}
+
+
+function enterGame(){
+  $("home-screen").classList.add("hidden");
+  $("rules-screen").classList.add("hidden");
+  $("game-ui").classList.remove("hidden");
+  setupSolitaire(level1.length);
+  loadLevelQuestion();
+  window.scrollTo({top:0,behavior:"smooth"});
+}
+$("start-game-btn").onclick=enterGame;
+$("rules-start-btn").onclick=enterGame;
+$("show-rules-btn").onclick=()=>{$("home-screen").classList.add("hidden");$("rules-screen").classList.remove("hidden")};
+$("back-home-btn").onclick=()=>{$("rules-screen").classList.add("hidden");$("home-screen").classList.remove("hidden")};
+$("home-btn").onclick=()=>{speechSynthesis.cancel();$("game-ui").classList.add("hidden");$("home-screen").classList.remove("hidden");$("header-score").textContent=score;$("header-combo").textContent=combo};
+setupSolitaire(level1.length);
+loadLevelQuestion();
+</script>
+</body>
+</html>
